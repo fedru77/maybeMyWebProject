@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나의 웹사이트</title>
+    <style>
+        /* [CSS] 화면 디자인 및 다크모드 스타일 */
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #0f172a;
+            --sub-text: #64748b;
+            --accent-color: #3b82f6;
+            --border-color: #e2e8f0;
+            --sidebar-bg: #ffffff;
+            --box-bg: #f1f5f9;
+        }
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --sub-text: #94a3b8;
+            --accent-color: #60a5fa;
+            --border-color: #334155;
+            --sidebar-bg: #0f172a;
+            --box-bg: #0f172a;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* --- [햄버거 버튼 절대 고정 스타일] --- */
+        .hamburger-btn {
+            position: fixed !important;
+            top: 20px !important;
+            left: 20px !important;
+            z-index: 9999 !important;
+            background-color: var(--card-bg);
+            border: 2px solid var(--accent-color);
+            color: var(--text-color);
+            font-size: 1.5rem;
+            padding: 0.5rem 0.8rem;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hamburger-btn:hover {
+            background-color: var(--accent-color);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* --- [사이드바 메뉴판 스타일] --- */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            box-shadow: 5px 0 20px rgba(0,0,0,0.15);
+            z-index: 10000;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-header {
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.2rem; color: var(--accent-color); }
+        .close-btn { background: none; border: none; font-size: 2rem; color: var(--sub-text); cursor: pointer; line-height: 1; }
+        .menu-list { list-style: none; padding: 1rem 0; margin: 0; }
+        .menu-list li a {
+            display: block;
+            padding: 1.2rem 1.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .menu-list li a:hover, .menu-list li a.active-menu {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--accent-color);
+            border-left: 4px solid var(--accent-color);
+        }
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 9998;
+            display: none;
+            backdrop-filter: blur(3px);
+        }
+        .overlay.active { display: block; }
+
+        /* --- [페이지 공통 카드 스타일] --- */
+        .page {
+            display: none; /* 기본적으로 모든 페이지 숨김 */
+            width: 100%;
+            max-width: 600px;
+            animation: fadeIn 0.3s ease;
+        }
+        .page.active {
+            display: block; /* active 클래스가 붙은 페이지만 화면에 표시 */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        h1 { font-size: 1.8rem; margin-top: 0; margin-bottom: 0.5rem; color: var(--text-color); }
+        p { color: var(--sub-text); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+
+        /* 내부에 들어갈 템플릿 박스 스타일 */
+        .content-box {
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .content-box h3 { margin-top: 0; color: var(--accent-color); font-size: 1.1rem; }
+
+        /* --- [공통 버튼 스타일] --- */
+        .button-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+        .btn {
+            background-color: var(--accent-color); color: #ffffff; border: none;
+            padding: 0.8rem 1.4rem; font-size: 0.95rem; font-weight: 600;
+            border-radius: 10px; cursor: pointer; transition: transform 0.1s, opacity 0.2s;
+            text-decoration: none; display: inline-block;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn:active { transform: scale(0.97); }
+        .btn-outline { background-color: transparent; border: 2px solid var(--accent-color); color: var(--accent-color); }
+        .btn-small {
+            background: none; border: 1px solid var(--border-color); color: var(--sub-text);
+            padding: 0.3rem 0.7rem; font-size: 0.8rem; border-radius: 8px; cursor: pointer;
+        }
+        .btn-small:hover { border-color: #ef4444; color: #ef4444; }
+
+        /* --- [홈: 바로가기 그리드] --- */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 1.5rem;
+        }
+        .quick-item {
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.2rem 0.5rem;
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        .quick-item:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            transform: translateY(-3px);
+        }
+        .quick-item .icon { display: block; font-size: 1.6rem; margin-bottom: 0.4rem; }
+
+        /* --- [워드 클라우드: 전체 화면] --- */
+        .page-fullscreen { max-width: none; }
+        .cloud-stage {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+        }
+        .cloud-stage span {
+            position: absolute;
+            font-weight: 700;
+            white-space: nowrap;
+            line-height: 1.1;
+            cursor: default;
+            transition: transform 0.2s ease;
+            animation: fadeIn 0.5s ease backwards;
+        }
+        .cloud-stage span:hover { transform: scale(1.15); z-index: 5; }
+        .cloud-title {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            font-size: 1.05rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.55rem 1.2rem;
+            border-radius: 999px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            z-index: 10;
+            white-space: nowrap;
+        }
+        .cloud-controls {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            width: min(92vw, 460px);
+            box-sizing: border-box;
+        }
+        .cloud-controls .input-field { flex: 1; margin-bottom: 0; }
+        .cloud-controls .btn { white-space: nowrap; padding: 0.7rem 1rem; }
+
+        /* --- [입력 폼 공통] --- */
+        .input-field, .textarea-field {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            margin-bottom: 0.7rem;
+        }
+        .input-field:focus, .textarea-field:focus { outline: 2px solid var(--accent-color); border-color: transparent; }
+        .textarea-field { resize: vertical; min-height: 110px; }
+
+        /* --- [일기장 목록] --- */
+        .entry-list { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1.5rem; text-align: left; }
+        .entry {
+            background-color: var(--box-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem 1.2rem;
+        }
+        .entry-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--sub-text);
+            margin-bottom: 0.5rem;
+        }
+        .entry-text { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; margin: 0; color: var(--text-color); }
+
+        /* --- [일기장: 기분 색깔 선택] --- */
+        .mood-picker { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 0.5rem; }
+        .mood-option {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            font-size: 1.35rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .mood-option:hover { transform: scale(1.12); }
+        .mood-option.selected {
+            border-color: var(--text-color);
+            transform: scale(1.12);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .mood-hint { font-size: 0.85rem; color: var(--sub-text); margin: 0 0 0.8rem; }
+        .mood-chip {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 0.72rem; font-weight: 700; color: #ffffff;
+            padding: 0.18rem 0.6rem; border-radius: 999px;
+        }
+
+        /* --- [게시판 목록] --- */
+        .board-list { margin-top: 1.5rem; text-align: left; border-top: 2px solid var(--accent-color); }
+        .board-item { border-bottom: 1px solid var(--border-color); padding: 0.9rem 0.3rem; }
+        .board-item-head { display: flex; justify-content: space-between; align-items: center; cursor: pointer; gap: 10px; }
+        .board-item-title { font-weight: 600; font-size: 0.98rem; }
+        .board-item-head:hover .board-item-title { color: var(--accent-color); }
+        .board-item-meta { font-size: 0.78rem; color: var(--sub-text); white-space: nowrap; }
+        .board-item-content {
+            display: none;
+            margin: 0.8rem 0 0.2rem;
+            padding: 0.9rem;
+            background-color: var(--box-bg);
+            border-radius: 10px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .board-item.open .board-item-content { display: block; }
+        .empty-msg { color: var(--sub-text); font-size: 0.9rem; padding: 1.2rem 0; margin: 0; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <button class="hamburger-btn" onclick="toggleMenu()" aria-label="메뉴 열기">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>메뉴</h2>
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+        </div>
+        <ul class="menu-list">
+            <li><a href="#home" class="menu-link" data-target="home">🏠 홈</a></li>
+            <li><a href="#wordcloud" class="menu-link" data-target="wordcloud">☁️ 나 워드 클라우드</a></li>
+            <li><a href="#diary" class="menu-link" data-target="diary">📔 일기장</a></li>
+            <li><a href="#portfolio" class="menu-link" data-target="portfolio">📁 포트폴리오</a></li>
+            <li><a href="#board" class="menu-link" data-target="board">📋 게시판</a></li>
+        </ul>
+    </nav>
+
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+    <!-- ================= 1. 홈 ================= -->
+    <div id="page-home" class="page active">
+        <div class="card">
+            <h1>🏠 홈</h1>
+            <p>나만의 공간에 오신 것을 환영합니다.<br>좌측 상단의 <strong>☰ 버튼</strong>을 누르거나 아래 바로가기로 이동해 보세요.</p>
+
+            <div class="quick-grid">
+                <a href="#wordcloud" class="quick-item"><span class="icon">☁️</span>나 워드 클라우드</a>
+                <a href="#diary" class="quick-item"><span class="icon">📔</span>일기장</a>
+                <a href="#portfolio" class="quick-item"><span class="icon">📁</span>포트폴리오</a>
+                <a href="#board" class="quick-item"><span class="icon">📋</span>게시판</a>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-outline" onclick="toggleTheme()">🌙 다크 모드</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 2. 나 워드 클라우드 (전체 화면) ================= -->
+    <div id="page-wordcloud" class="page page-fullscreen">
+        <div class="cloud-stage" id="wordCloud"></div>
+        <h1 class="cloud-title">☁️ 나 워드 클라우드</h1>
+        <div class="cloud-controls">
+            <input type="text" id="wordInput" class="input-field" placeholder="나를 표현하는 단어 추가" onkeydown="if(event.key==='Enter') addWord()">
+            <button class="btn" onclick="addWord()">➕ 추가</button>
+            <button class="btn btn-outline" onclick="resetCloud()" title="추가한 단어 모두 지우기" style="padding: 0.7rem 0.9rem;">↺</button>
+        </div>
+    </div>
+
+    <!-- ================= 3. 일기장 ================= -->
+    <div id="page-diary" class="page">
+        <div class="card">
+            <h1>📔 일기장</h1>
+            <p>오늘 하루를 기록해 보세요.<br>그날의 기분을 색깔로 골라 함께 저장할 수 있어요.</p>
+
+            <div class="mood-picker" id="moodPicker"></div>
+            <p class="mood-hint" id="moodHint"></p>
+
+            <textarea id="diaryInput" class="textarea-field" placeholder="오늘은 어떤 하루였나요?"></textarea>
+            <div class="button-group" style="margin-top: 0.5rem;">
+                <button class="btn" onclick="addDiary()">✏️ 일기 저장</button>
+                <a href="#home" class="btn btn-outline">🏠 홈으로</a>
+            </div>
+
+            <div class="entry-list" id="diaryList"></div>
+        </div>
+    </div>
+
+    <!-- ================= 4. 포트폴리오 ================= -->
+    <div id="page-portfolio" class="page">
+        <div class="card">
+            <h1>📁 포트폴리오</h1>
+            <p>그동안 작업한 결과물들을 소개하는 공간입니다.</p>
+
+            <div class="content-box">
+                <h3>🏆 프로젝트 A — 101가지 밥 사주는 이유 생성기</h3>
+                <p style="margin-bottom: 0;">버튼 하나로 밥을 얻어먹을 명분을 만들어주는 재미있는 웹사이트입니다.</p>
+            </div>
+
+            <div class="content-box">
+                <h3>🌐 프로젝트 B — 나만의 웹사이트</h3>
+                <p style="margin-bottom: 0;">햄버거 메뉴, 일기장, 게시판, 워드 클라우드를 담은 지금 이 웹사이트입니다.</p>
+            </div>
+
+            <div class="content-box">
+                <h3>🚧 프로젝트 C — 준비 중</h3>
+                <p style="margin-bottom: 0;">다음 프로젝트를 준비하고 있어요. 기대해 주세요!</p>
+            </div>
+
+            <div class="button-group">
+                <a href="#board" class="btn">게시판 보러가기 📋</a>
+                <a href="#home" class="btn btn-outline">🏠 홈으로</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 5. 게시판 ================= -->
+    <div id="page-board" class="page">
+        <div class="card">
+            <h1>📋 게시판</h1>
+            <p>자유롭게 글을 남기는 공간입니다.<br>제목을 클릭하면 내용을 펼쳐볼 수 있어요.</p>
+
+            <input type="text" id="postTitle" class="input-field" placeholder="제목을 입력하세요">
+            <textarea id="postContent" class="textarea-field" placeholder="내용을 입력하세요" style="min-height: 80px;"></textarea>
+            <div class="button-group" style="margin-top: 0.5rem;">
+                <button class="btn" onclick="addPost()">📝 글 등록</button>
+                <a href="#home" class="btn btn-outline">🏠 홈으로</a>
+            </div>
+
+            <div class="board-list" id="boardList"></div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 페이지 전환 핵심 로직 (URL의 #주소를 읽어서 해당 페이지만 보여줌)
+        function handleRoute() {
+            const hash = window.location.hash.replace('#', '') || 'home';
+
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+
+            const targetPage = document.getElementById(`page-${hash}`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            } else {
+                document.getElementById('page-home').classList.add('active');
+            }
+
+            const menuLinks = document.querySelectorAll('.menu-link');
+            menuLinks.forEach(link => {
+                if (link.getAttribute('data-target') === hash) {
+                    link.classList.add('active-menu');
+                } else {
+                    link.classList.remove('active-menu');
+                }
+            });
+
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) {
+                toggleMenu();
+            }
+
+            // 워드 클라우드 페이지가 열리면 화면 크기에 맞춰 단어를 배치
+            if (document.getElementById('page-wordcloud').classList.contains('active')) {
+                requestAnimationFrame(layoutCloud);
+            }
+        }
+
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('DOMContentLoaded', () => {
+            handleRoute();
+            renderMoodPicker();
+            renderDiary();
+            renderBoard();
+        });
+
+        // 사이드바 메뉴 열기/닫기 기능
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        // 다크모드 토글 기능
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const themeBtns = document.querySelectorAll('.btn-outline');
+            themeBtns.forEach(btn => {
+                if (btn.textContent.includes('모드')) {
+                    btn.textContent = document.body.classList.contains('dark-mode') ? '☀️ 라이트 모드' : '🌙 다크 모드';
+                }
+            });
+        }
+
+        // ===== 나 워드 클라우드 (전체 화면 나선형 배치) =====
+        const cloudColors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16', '#f97316', '#6366f1'];
+        // [단어, 중요도(1~10)] — 중요도가 클수록 글자가 커지고 중앙에 배치됨
+        const baseWords = [
+            ['열정', 10], ['꿈', 9], ['코딩', 9], ['성장', 8], ['도전', 8], ['가족', 8],
+            ['음악', 7], ['여행', 7], ['긍정', 7], ['행복', 7], ['웃음', 6], ['우정', 6],
+            ['독서', 6], ['커피', 6], ['노력', 6], ['호기심', 5], ['상상력', 5], ['끈기', 5],
+            ['자유', 5], ['운동', 5], ['영화', 5], ['게임', 5], ['바다', 5], ['유머', 4],
+            ['감성', 4], ['사진', 4], ['요리', 4], ['추억', 4], ['청춘', 4], ['고양이', 4],
+            ['별', 4], ['산책', 4], ['하늘', 3], ['새벽', 3], ['설렘', 3], ['메모', 3],
+            ['라면', 3], ['초록', 3], ['플레이리스트', 3], ['달리기', 3]
+        ];
+
+        function getUserWords() {
+            return JSON.parse(localStorage.getItem('cloudWords') || '[]');
+        }
+
+        function layoutCloud() {
+            if (!document.getElementById('page-wordcloud').classList.contains('active')) return;
+            const stage = document.getElementById('wordCloud');
+            stage.innerHTML = '';
+            const W = stage.clientWidth, H = stage.clientHeight;
+            if (W === 0 || H === 0) return;
+
+            // 화면 크기에 따라 글자 크기를 조절해서 화면을 채움
+            const scale = Math.max(0.75, Math.min(W, H) / 480);
+            const shorter = Math.min(W, H);
+            const ex = W / shorter, ey = H / shorter; // 화면 비율만큼 타원형으로 퍼뜨림
+
+            const words = baseWords.concat(getUserWords().map(w => [w.text, w.weight]))
+                .slice().sort((a, b) => b[1] - a[1]);
+            const placed = [];
+
+            words.forEach((item, i) => {
+                const span = document.createElement('span');
+                span.textContent = item[0];
+                span.style.fontSize = Math.round((11 + item[1] * 5.5) * scale) + 'px';
+                span.style.color = cloudColors[i % cloudColors.length];
+                if (i % 5 === 3) span.style.writingMode = 'vertical-rl'; // 일부 단어는 세로쓰기
+                span.style.visibility = 'hidden';
+                stage.appendChild(span);
+
+                const w = span.offsetWidth + 10, h = span.offsetHeight + 8;
+                const startAngle = i * 2.39996; // 단어마다 다른 방향에서 나선 시작
+                let x, y, found = false;
+
+                // 중앙에서 바깥으로 나선을 그리며 겹치지 않는 빈 자리를 찾음
+                for (let t = 0; t < 900; t++) {
+                    const r = t * 0.7;
+                    x = W / 2 + r * ex * Math.cos(startAngle + t * 0.35) - w / 2;
+                    y = H / 2 + r * ey * Math.sin(startAngle + t * 0.35) - h / 2;
+                    if (x < 6 || y < 6 || x + w > W - 6 || y + h > H - 6) continue;
+                    if (!placed.some(p => x < p.x + p.w && x + w > p.x && y < p.y + p.h && y + h > p.y)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    placed.push({ x: x, y: y, w: w, h: h });
+                    span.style.left = x + 'px';
+                    span.style.top = y + 'px';
+                    span.style.animationDelay = Math.min(i * 20, 800) + 'ms';
+                    span.style.visibility = 'visible';
+                } else {
+                    span.remove(); // 자리가 없으면 표시하지 않음
+                }
+            });
+        }
+
+        function addWord() {
+            const input = document.getElementById('wordInput');
+            const word = input.value.trim();
+            if (!word) return;
+
+            const userWords = getUserWords();
+            userWords.push({ text: word, weight: 6 + Math.floor(Math.random() * 4) });
+            localStorage.setItem('cloudWords', JSON.stringify(userWords));
+            input.value = '';
+            input.focus();
+            layoutCloud();
+        }
+
+        function resetCloud() {
+            localStorage.removeItem('cloudWords');
+            layoutCloud();
+        }
+
+        // 창 크기가 바뀌면 워드 클라우드를 다시 배치
+        let cloudResizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(cloudResizeTimer);
+            cloudResizeTimer = setTimeout(layoutCloud, 200);
+        });
+
+        // ===== 일기장 (localStorage 저장) =====
+        // 그날의 기분을 나타내는 색깔 목록
+        const MOODS = [
+            { id: 'joy',     name: '기쁨', emoji: '😊', color: '#f59e0b' },
+            { id: 'calm',    name: '평온', emoji: '😌', color: '#10b981' },
+            { id: 'excited', name: '설렘', emoji: '💗', color: '#ec4899' },
+            { id: 'sad',     name: '슬픔', emoji: '💧', color: '#3b82f6' },
+            { id: 'angry',   name: '화남', emoji: '😠', color: '#ef4444' },
+            { id: 'tired',   name: '피곤', emoji: '😴', color: '#8b5cf6' }
+        ];
+        let selectedMood = 'calm';
+
+        function renderMoodPicker() {
+            const picker = document.getElementById('moodPicker');
+            picker.innerHTML = '';
+            MOODS.forEach(m => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'mood-option' + (m.id === selectedMood ? ' selected' : '');
+                btn.style.backgroundColor = m.color;
+                btn.textContent = m.emoji;
+                btn.title = m.name;
+                btn.onclick = () => { selectedMood = m.id; renderMoodPicker(); };
+                picker.appendChild(btn);
+            });
+            const current = MOODS.find(m => m.id === selectedMood);
+            document.getElementById('moodHint').textContent = '오늘의 기분: ' + current.emoji + ' ' + current.name;
+        }
+
+        function getDiary() {
+            return JSON.parse(localStorage.getItem('diaryEntries') || '[]');
+        }
+        function addDiary() {
+            const input = document.getElementById('diaryInput');
+            const text = input.value.trim();
+            if (!text) { alert('일기 내용을 입력해 주세요!'); return; }
+
+            const entries = getDiary();
+            entries.unshift({
+                id: Date.now(),
+                date: new Date().toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: 'short' }),
+                text: text,
+                mood: selectedMood
+            });
+            localStorage.setItem('diaryEntries', JSON.stringify(entries));
+            input.value = '';
+            renderDiary();
+        }
+        function deleteDiary(id) {
+            const entries = getDiary().filter(e => e.id !== id);
+            localStorage.setItem('diaryEntries', JSON.stringify(entries));
+            renderDiary();
+        }
+        function renderDiary() {
+            const list = document.getElementById('diaryList');
+            list.innerHTML = '';
+            const entries = getDiary();
+
+            if (entries.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'empty-msg';
+                empty.textContent = '아직 작성된 일기가 없어요. 첫 일기를 남겨보세요! ✨';
+                list.appendChild(empty);
+                return;
+            }
+            entries.forEach(entry => {
+                const div = document.createElement('div');
+                div.className = 'entry';
+                const mood = MOODS.find(m => m.id === entry.mood);
+
+                const head = document.createElement('div');
+                head.className = 'entry-head';
+
+                const left = document.createElement('span');
+                left.style.display = 'inline-flex';
+                left.style.alignItems = 'center';
+                left.style.gap = '8px';
+                left.style.flexWrap = 'wrap';
+                if (mood) {
+                    // 그날 고른 기분 색깔을 보드에 표시
+                    div.style.borderLeft = '6px solid ' + mood.color;
+                    div.style.backgroundColor = mood.color + '18'; // 기분 색의 옅은 배경
+                    const chip = document.createElement('span');
+                    chip.className = 'mood-chip';
+                    chip.style.backgroundColor = mood.color;
+                    chip.textContent = mood.emoji + ' ' + mood.name;
+                    left.appendChild(chip);
+                }
+                const date = document.createElement('span');
+                date.textContent = '🗓️ ' + entry.date;
+                left.appendChild(date);
+
+                const del = document.createElement('button');
+                del.className = 'btn-small';
+                del.textContent = '삭제';
+                del.onclick = () => deleteDiary(entry.id);
+                head.appendChild(left);
+                head.appendChild(del);
+
+                const text = document.createElement('p');
+                text.className = 'entry-text';
+                text.textContent = entry.text;
+
+                div.appendChild(head);
+                div.appendChild(text);
+                list.appendChild(div);
+            });
+        }
+
+        // ===== 게시판 (localStorage 저장) =====
+        function getPosts() {
+            return JSON.parse(localStorage.getItem('boardPosts') || '[]');
+        }
+        function addPost() {
+            const titleInput = document.getElementById('postTitle');
+            const contentInput = document.getElementById('postContent');
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+            if (!title || !content) { alert('제목과 내용을 모두 입력해 주세요!'); return; }
+
+            const posts = getPosts();
+            posts.unshift({
+                id: Date.now(),
+                title: title,
+                content: content,
+                date: new Date().toLocaleDateString('ko-KR')
+            });
+            localStorage.setItem('boardPosts', JSON.stringify(posts));
+            titleInput.value = '';
+            contentInput.value = '';
+            renderBoard();
+        }
+        function deletePost(id) {
+            const posts = getPosts().filter(p => p.id !== id);
+            localStorage.setItem('boardPosts', JSON.stringify(posts));
+            renderBoard();
+        }
+        function renderBoard() {
+            const list = document.getElementById('boardList');
+            list.innerHTML = '';
+            const posts = getPosts();
+
+            if (posts.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'empty-msg';
+                empty.textContent = '아직 게시글이 없어요. 첫 글을 남겨보세요! 📝';
+                list.appendChild(empty);
+                return;
+            }
+            posts.forEach(post => {
+                const item = document.createElement('div');
+                item.className = 'board-item';
+
+                const head = document.createElement('div');
+                head.className = 'board-item-head';
+                head.onclick = () => item.classList.toggle('open');
+
+                const title = document.createElement('span');
+                title.className = 'board-item-title';
+                title.textContent = post.title;
+
+                const meta = document.createElement('span');
+                meta.className = 'board-item-meta';
+                meta.textContent = post.date;
+
+                const del = document.createElement('button');
+                del.className = 'btn-small';
+                del.textContent = '삭제';
+                del.onclick = (e) => { e.stopPropagation(); deletePost(post.id); };
+
+                head.appendChild(title);
+                head.appendChild(meta);
+                head.appendChild(del);
+
+                const content = document.createElement('div');
+                content.className = 'board-item-content';
+                content.textContent = post.content;
+
+                item.appendChild(head);
+                item.appendChild(content);
+                list.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>
