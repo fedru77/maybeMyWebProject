@@ -428,7 +428,7 @@
     <div id="page-board" class="page">
         <div class="card">
             <h1>📋 게시판</h1>
-            <p>자유롭게 글을 남기는 공간입니다.<br>제목을 클릭하면 내용을 펼쳐볼 수 있어요.</p>
+            <p>모든 방문자가 함께 보는 공개 게시판입니다.<br>제목을 클릭하면 내용을 펼쳐볼 수 있어요.</p>
 
             <input type="text" id="postTitle" class="input-field" placeholder="제목을 입력하세요">
             <textarea id="postContent" class="textarea-field" placeholder="내용을 입력하세요" style="min-height: 80px;"></textarea>
@@ -441,6 +441,8 @@
         </div>
     </div>
 
+    <!-- Supabase 데이터베이스 연결 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // 1. 페이지 전환 핵심 로직 (URL의 #주소를 읽어서 해당 페이지만 보여줌)
         function handleRoute() {
@@ -704,46 +706,63 @@
             });
         }
 
-        // ===== 게시판 (localStorage 저장) =====
-        function getPosts() {
-            return JSON.parse(localStorage.getItem('boardPosts') || '[]');
+        // ===== 게시판 (Supabase 데이터베이스 저장) =====
+        // 모든 방문자가 같은 게시판을 보도록 글을 Supabase DB에 저장합니다.
+        // publishable 키는 웹페이지에 공개되도록 설계된 값이며,
+        // 실제 권한은 Supabase의 RLS(Row Level Security) 정책이 결정합니다.
+        const SUPABASE_URL = 'https://jhovathzifqpbwnldqyt.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_o4qAd25G4zPjEMZMg8H_kQ_n4KGvtvk';
+        const sb = (typeof supabase !== 'undefined')
+            ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+            : null;
+
+        function boardMessage(text) {
+            const list = document.getElementById('boardList');
+            list.innerHTML = '';
+            const msg = document.createElement('p');
+            msg.className = 'empty-msg';
+            msg.textContent = text;
+            list.appendChild(msg);
         }
-        function addPost() {
+
+        async function addPost() {
+            if (!sb) { alert('데이터베이스에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.'); return; }
             const titleInput = document.getElementById('postTitle');
             const contentInput = document.getElementById('postContent');
             const title = titleInput.value.trim();
             const content = contentInput.value.trim();
             if (!title || !content) { alert('제목과 내용을 모두 입력해 주세요!'); return; }
 
-            const posts = getPosts();
-            posts.unshift({
-                id: Date.now(),
-                title: title,
-                content: content,
-                date: new Date().toLocaleDateString('ko-KR')
-            });
-            localStorage.setItem('boardPosts', JSON.stringify(posts));
+            const { error } = await sb.from('posts').insert({ title: title, content: content });
+            if (error) {
+                alert('글 등록에 실패했어요: ' + error.message);
+                return;
+            }
             titleInput.value = '';
             contentInput.value = '';
             renderBoard();
         }
-        function deletePost(id) {
-            const posts = getPosts().filter(p => p.id !== id);
-            localStorage.setItem('boardPosts', JSON.stringify(posts));
-            renderBoard();
-        }
-        function renderBoard() {
-            const list = document.getElementById('boardList');
-            list.innerHTML = '';
-            const posts = getPosts();
 
-            if (posts.length === 0) {
-                const empty = document.createElement('p');
-                empty.className = 'empty-msg';
-                empty.textContent = '아직 게시글이 없어요. 첫 글을 남겨보세요! 📝';
-                list.appendChild(empty);
+        async function renderBoard() {
+            if (!sb) { boardMessage('데이터베이스에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.'); return; }
+            boardMessage('게시글을 불러오는 중... ⏳');
+
+            const { data: posts, error } = await sb
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                boardMessage('게시글을 불러오지 못했어요: ' + error.message);
                 return;
             }
+            if (posts.length === 0) {
+                boardMessage('아직 게시글이 없어요. 첫 글을 남겨보세요! 📝');
+                return;
+            }
+
+            const list = document.getElementById('boardList');
+            list.innerHTML = '';
             posts.forEach(post => {
                 const item = document.createElement('div');
                 item.className = 'board-item';
@@ -758,16 +777,10 @@
 
                 const meta = document.createElement('span');
                 meta.className = 'board-item-meta';
-                meta.textContent = post.date;
-
-                const del = document.createElement('button');
-                del.className = 'btn-small';
-                del.textContent = '삭제';
-                del.onclick = (e) => { e.stopPropagation(); deletePost(post.id); };
+                meta.textContent = new Date(post.created_at).toLocaleDateString('ko-KR');
 
                 head.appendChild(title);
                 head.appendChild(meta);
-                head.appendChild(del);
 
                 const content = document.createElement('div');
                 content.className = 'board-item-content';
